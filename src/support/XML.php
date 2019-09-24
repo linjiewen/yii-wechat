@@ -1,12 +1,6 @@
 <?php
-/**
- * Author: lf
- * Blog: https://blog.feehi.com
- * Email: job@feehi.com
- * Created at: 2018-01-09 19:04
- */
 
-namespace feehi\wechat\support;
+namespace haotong\wechat\support;
 
 class XML
 {

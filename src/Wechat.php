@@ -1,11 +1,6 @@
 <?php
-/**
- * Author: lf
- * Blog: https://blog.feehi.com
- * Email: job@feehi.com
- * Created at: 2018-01-04 12:24
- */
-namespace feehi\wechat;
+
+namespace haotong\wechat;
 
 use yii;
 use yii\base\Exception;
