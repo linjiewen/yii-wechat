@@ -32,6 +32,20 @@ class Wechat extends \yii\base\BaseObject
     }
 
     /**
+     * 获取code
+     *
+     * @return \stdClass
+     * @throws Exception
+     */
+    public function getCode()
+    {
+        $url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=$this->appId&redirect_uri=$this->redirectUri&response_type=code&scope=scope&state=STATE#wechat_redirect";
+        $result = Helper::httpRequest($url);
+
+        return $result;
+    }
+
+    /**
      * 验证signature判断是否输出echoStr
      *
      * @param $get array $_GET超全局数组
