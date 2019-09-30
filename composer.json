@@ -1,0 +1,21 @@
+{
+    "name": "haotong/yii2-wechat",
+    "description": "yii2 wechat",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "haotong",
+            "email": "576006908@qq.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "haotong\\": "src/"
+        }
+    }
+}

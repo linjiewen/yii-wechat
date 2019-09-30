@@ -3,19 +3,6 @@ yii2 wechat
 
 yii2 wechat， yii2微信扩展。最适合yii2项目的微信sdk，不依赖任何其他微信sdk。
 
-
-安装
----------------
-1. 使用composer
-     composer的安装以及国内镜像设置请点击[此处](http://www.phpcomposer.com/)
-     
-     ```bash
-     $ cd /path/to/yii2-app
-     $ composer require "feehi/yii2-wechat"
-     $ composer install -vvv
-     ```
- 
-
 配置
 -------------
 yii2 wechat是作为一个组件提供服务的，所以得配置yii2 wechat组件。打开common/config/main.php在components块内增加
