@@ -32,16 +32,96 @@ class Wechat extends \yii\base\BaseObject
     }
 
     /**
-     * 获取code
+     * 获取code(公众平台)
      *
+     * @param string $scope 应用授权作用域，snsapi_base （不弹出授权页面，直接跳转，只能获取用户openid），snsapi_userinfo （弹出授权页面，可通过openid拿到昵称、性别、所在地。并且， 即使在未关注的情况下，只要用户授权，也能获取其信息 ）
      * @return \stdClass
      * @throws Exception
      */
-    public function getCode()
+    public function getCode($scope = 'scope')
     {
-        $url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=$this->appId&redirect_uri=$this->redirectUri&response_type=code&scope=scope&state=STATE#wechat_redirect";
+        $url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=$this->appId&redirect_uri=$this->redirectUri&response_type=code&scope=$scope&state=STATE#wechat_redirect";
         $result = Helper::httpRequest($url);
 
+        return $result;
+    }
+
+    /**
+     * 获取code(开放平台) 第三方使用网站应用授权登录前请注意已获取相应网页授权作用域（scope=snsapi_login），则可以通过在PC端打开以下链接:
+     *
+     * appid 应用唯一标识
+     * redirect_uri	 请使用urlEncode对链接进行处理
+     * response_type 填code
+     * scope 应用授权作用域，拥有多个作用域用逗号（,）分隔，网页应用目前仅填写snsapi_login即
+     * state 用于保持请求和回调的状态，授权请求后原样带回给第三方。该参数可用于防止csrf攻击（跨站请求伪造攻击），建议第三方带上该参数，可设置为简单的随机数加session进行校验
+     * 用户允许授权后，将会重定向到redirect_uri的网址上，并且带上code和state参数 例如：redirect_uri?code=CODE&state=STATE
+     * 若用户禁止授权，则重定向后不会带上code参数，仅会带上state参数 例如：redirect_uri?state=STATE
+     *
+     * @param string $redirect_uri 回调地址
+     */
+    public function getOpenCode($redirect_uri)
+    {
+        $url = "https://open.weixin.qq.com/connect/qrconnect?appid=$this->appId&redirect_uri=$redirect_uri&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect";
+        header("Location:".$url);
+    }
+
+    /**
+     * 获取前端请求授权url（公众号）
+     *
+     * @param string $redirectUri 回调地址 如果redirectUri为空则使用组件配置的回调地址
+     * @param string $state 微信回调原样返回参数
+     * @param string $scope 仅能为snsapi_userinfo或snsapi_base,具体区别请查阅微信文档
+     * @return string
+     * @throws \yii\base\Exception
+     */
+    public function getLoginUrl($redirectUri='', $scope='snsapi_userinfo', $state='')
+    {
+        if( !in_array($scope, ['snsapi_userinfo', 'snsapi_base']) ) throw new Exception("scope must be snsapi_userinfo or snsapi_base");
+        $params = [
+            'appid' => $this->appId,
+            'redirect_uri' => $redirectUri ? urlencode( $redirectUri ) : Url::to([$this->redirectUri], true),
+            'response_type' => 'code',
+            'scope' => $scope,
+            'state' => $state,
+        ];
+        $queryString = http_build_query($params);
+        return $this->baseUri . "connect/oauth2/authorize?" . $queryString . '#wechat_redirect';
+    }
+
+    /**
+     * 获取网页授权token（公众平台和开放平台通用）
+     *
+     * @param $code string 上一步返回的code
+     * @return \stdClass
+     */
+    public function getAccessToken($code)
+    {
+        $queryString = http_build_query([
+            'appid' => $this->appId,
+            'secret' => $this->appSecret,
+            'code' => $code,
+            'grant_type' => 'authorization_code'
+        ]);
+        $result = Helper::httpRequest(str_replace('/cgi-bin', '', $this->baseApiUri) . 'sns/oauth2/access_token?' . $queryString);
+        return $result;
+    }
+
+    /**
+     * 获取用户信息 授权类型必须scope为 snsapi_userinfo
+     *
+     * @param string $accessToken
+     * @param string $openid
+     * @param string $lang
+     * @return mixed
+     */
+    public function getUserInfo($accessToken, $openid, $lang = 'zh_CN')
+    {
+        $queryString = http_build_query([
+            'access_token' => $accessToken,
+            'openid' => $openid,
+            'lang' => $lang,
+        ]);
+        $result = Helper::httpRequest(str_replace('/cgi-bin', '', $this->baseApiUri) . 'sns/userinfo?' . $queryString);
         return $result;
     }
 
@@ -107,84 +187,6 @@ class Wechat extends \yii\base\BaseObject
             ],
             'body' => json_encode($data, JSON_UNESCAPED_UNICODE)
         ]);
-    }
-
-    /**
-     * 获取登陆url
-     *
-     * @param string $redirectUri 回调地址 如果redirectUri为空则使用组件配置的回调地址
-     * @param string $state 微信回调原样返回参数
-     * @param string $scope 仅能为snsapi_userinfo或snsapi_base,具体区别请查阅微信文档
-     * @return string
-     * @throws \yii\base\Exception
-     */
-    public function getLoginUrl($redirectUri='', $scope='snsapi_userinfo', $state='')
-    {
-        if( !in_array($scope, ['snsapi_userinfo', 'snsapi_base']) ) throw new Exception("scope must be snsapi_userinfo or snsapi_base");
-        $params = [
-            'appid' => $this->appId,
-            'redirect_uri' => $redirectUri ? urlencode( $redirectUri ) : Url::to([$this->redirectUri], true),
-            'response_type' => 'code',
-            'scope' => $scope,
-            'state' => $state,
-        ];
-        $queryString = http_build_query($params);
-        return $this->baseUri . "connect/oauth2/authorize?" . $queryString . '#wechat_redirect';
-    }
-
-    /**
-     * 获取网页授权token
-     *
-     * @param $code string 上一步返回的code
-     * @return \stdClass
-     */
-    public function getAccessToken($code)
-    {
-        $queryString = http_build_query([
-            'appid' => $this->appId,
-            'secret' => $this->appSecret,
-            'code' => $code,
-            'grant_type' => 'authorization_code'
-        ]);
-        $result = Helper::httpRequest(str_replace('/cgi-bin', '', $this->baseApiUri) . 'sns/oauth2/access_token?' . $queryString);
-        return $result;
-    }
-
-    /**
-     * 隐示授权登陆获取用户信息
-     *
-     * @param $code
-     * @return mixed
-     */
-    public function getImplicitAccessToken($code)
-    {
-        $queryString = http_build_query([
-            'appid' => $this->appId,
-            'secret' => $this->appSecret,
-            'code' => $code,
-            'grant_type' => 'authorization_code',
-        ]);
-        $result = Helper::httpRequest($this->baseUri . 'sns/oauth2/access_token?' . $queryString);
-        return $result;
-    }
-
-    /**
-     * 获取用户信息 授权类型必须scope为 snsapi_userinfo
-     *
-     * @param $accessToken
-     * @param $openid
-     * @param string $lang
-     * @return mixed
-     */
-    public function getUserInfo($accessToken, $openid, $lang = 'zh_CN')
-    {
-        $queryString = http_build_query([
-            'access_token' => $accessToken,
-            'openid' => $openid,
-            'lang' => $lang,
-        ]);
-        $result = Helper::httpRequest(str_replace('/cgi-bin', '', $this->baseApiUri) . 'sns/userinfo?' . $queryString);
-        return $result;
     }
 
     /**
